@@ -1,0 +1,27 @@
+# Environment & secrets
+.env
+.env.*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+.venv/
+
+# Scraper output files
+*.json
+*.csv
+
+# Browser automation data
+browseruse_agent_data/
+
+# Claude Code
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
