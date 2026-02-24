@@ -37,6 +37,8 @@ def parse_args():
     parser.add_argument("--platform", choices=["linkedin", "twitter", "both"],
                         default="both", help="Which platform(s) to open (default: both)")
     parser.add_argument("--limit", type=int, help="Max number of profiles to open this session")
+    parser.add_argument("--range", metavar="START-END", dest="range_str",
+                        help="Only process profiles in this 1-based range, e.g. 25-50")
     parser.add_argument("--resume", action="store_true",
                         help="Skip founders already visited in progress file")
     parser.add_argument("--delay", type=int, metavar="SECONDS",
@@ -131,6 +133,22 @@ def main():
         if not profiles:
             print("All profiles already visited. Nothing to do.", file=sys.stderr)
             sys.exit(0)
+
+    # Apply range (1-based, inclusive)
+    if args.range_str:
+        try:
+            start_s, end_s = args.range_str.split("-", 1)
+            start, end = int(start_s), int(end_s)
+        except ValueError:
+            print(f"Error: invalid range '{args.range_str}', expected format: START-END (e.g. 25-50)",
+                  file=sys.stderr)
+            sys.exit(1)
+        if start < 1 or end < start:
+            print(f"Error: invalid range {start}-{end}", file=sys.stderr)
+            sys.exit(1)
+        total_before = len(profiles)
+        profiles = profiles[start - 1:end]
+        print(f"Selected range {start}-{end} of {total_before} profiles.", file=sys.stderr)
 
     # Apply limit
     if args.limit:

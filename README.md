@@ -93,3 +93,50 @@ One row per founder with columns: `company`, `slug`, `batch`, `website`, `locati
 ## Rate Limiting
 
 The script waits 1 second between requests by default. Adjust with `--delay`. Scraping large batches (100+ companies) will take several minutes.
+
+## Follow Founders
+
+After scraping, use `follow_founders.py` to open each founder's profile in your browser for manual Follow/Connect. No external dependencies required.
+
+```bash
+# Open all profiles one at a time
+python follow_founders.py s24_founders.json
+
+# Only LinkedIn profiles
+python follow_founders.py s24_founders.json --platform linkedin
+
+# Only Twitter/X profiles
+python follow_founders.py s24_founders.json --platform twitter
+
+# Auto-advance every 8 seconds (no terminal interaction needed)
+python follow_founders.py s24_founders.json --delay 8
+
+# Process only profiles 25-50
+python follow_founders.py s24_founders.json --range 25-50
+
+# Resume where you left off, limit to 20
+python follow_founders.py s24_founders.json --resume --limit 20
+```
+
+### Options
+
+| Flag | Description | Example |
+|---|---|---|
+| `--platform` | Which platform(s) to open | `linkedin`, `twitter`, `both` (default) |
+| `--delay` | Auto-advance after N seconds | `8` |
+| `--range` | Only process profiles in this range (1-based, inclusive) | `25-50` |
+| `--limit` | Max profiles to open this session | `20` |
+| `--resume` | Skip profiles already visited | |
+| `--no-close` | Don't auto-close the previous tab | |
+
+### Controls
+
+In manual mode (no `--delay`):
+- **Enter** — mark as done, open next profile
+- **s** — skip, open next profile
+- **q** — quit (progress saved)
+
+In auto mode (`--delay N`):
+- **Ctrl+C** — stop
+
+Progress is saved to `follow_progress.json` after each profile, so you can safely stop and resume later with `--resume`.
