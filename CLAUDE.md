@@ -7,9 +7,10 @@ This is a CLI scraper that extracts **founder LinkedIn and Twitter/X links** fro
 1. **Phase 1 - Company list**: Fetches company slugs from the [yc-oss community API](https://yc-oss.github.io/api) with filters (batch, industry, tag, top companies, region, status).
 2. **Phase 2 - Founder scraping**: For each company slug, fetches the YC company detail page (`ycombinator.com/companies/{slug}`), extracts structured founder data from the `data-page` React attribute embedded in the HTML.
 
-## Key File
+## Key Files
 
 - `scrape_yc_founders.py` - The entire scraper in a single file. ~330 lines.
+- `follow_founders.py` - Manual-assist browser script that opens founder LinkedIn/Twitter profiles in your default browser for manual Follow/Connect. Uses `webbrowser` (stdlib).
 
 ## Architecture Decisions
 
@@ -42,6 +43,18 @@ The `normalize_batch()` function handles this mapping so users can pass friendly
 
 - `httpx` - HTTP client
 - `tqdm` - progress bar
+
+## Follow Founders Script
+
+`follow_founders.py` is a manual-assist browser tool that works with the JSON output of `scrape_yc_founders.py`.
+
+**How it works:**
+1. Opens each founder's profile page in your default browser (new tab if browser is already running)
+2. You manually click Follow/Connect (or skip)
+3. Press Enter to advance, 's' to skip, 'q' to quit
+4. Progress saved to `follow_progress.json` after each action — safe to interrupt
+
+**No external dependencies** — uses Python's `webbrowser` module (stdlib). Opens URLs in whatever browser is set as your system default, with all your existing logins intact.
 
 ## Reference File
 
