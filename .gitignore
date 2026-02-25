@@ -12,6 +12,9 @@ build/
 # Virtual environment
 .venv/
 
+# Data folder
+data/
+
 # Scraper output files
 *.json
 *.csv
