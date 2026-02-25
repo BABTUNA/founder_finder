@@ -197,15 +197,19 @@ def fetch_company_list(client: httpx.Client, args) -> list[dict]:
     return companies
 
 
-def scrape_founders(client: httpx.Client, slug: str) -> list[dict]:
-    """Scrape founder details from a YC company page."""
+def scrape_company_page(client: httpx.Client, slug: str) -> dict | None:
+    """Scrape founder and company social details from a YC company page.
+
+    Returns a dict with 'founders', 'company_linkedin', and 'company_twitter',
+    or None on failure.
+    """
     url = f"{YC_COMPANY_URL}/{slug}"
     try:
         resp = client.get(url, follow_redirects=True)
         resp.raise_for_status()
     except (httpx.HTTPStatusError, httpx.RequestError) as e:
         print(f"  Warning: failed to fetch {url}: {e}", file=sys.stderr)
-        return []
+        return None
 
     page_html = resp.text
 
@@ -213,20 +217,19 @@ def scrape_founders(client: httpx.Client, slug: str) -> list[dict]:
     match = re.search(r'data-page="(.*?)"', page_html, re.DOTALL)
     if not match:
         print(f"  Warning: no data-page found for {slug}", file=sys.stderr)
-        return []
+        return None
 
     try:
         decoded = html.unescape(match.group(1))
         page_data = json.loads(decoded)
     except (json.JSONDecodeError, ValueError) as e:
         print(f"  Warning: failed to parse JSON for {slug}: {e}", file=sys.stderr)
-        return []
+        return None
 
     company = page_data.get("props", {}).get("company", {})
-    raw_founders = company.get("founders", [])
 
     founders = []
-    for f in raw_founders:
+    for f in company.get("founders", []):
         founders.append({
             "name": f.get("full_name", ""),
             "title": f.get("title", ""),
@@ -234,13 +237,18 @@ def scrape_founders(client: httpx.Client, slug: str) -> list[dict]:
             "twitter": f.get("twitter_url", ""),
         })
 
-    return founders
+    return {
+        "founders": founders,
+        "company_linkedin": company.get("linkedin_url", ""),
+        "company_twitter": company.get("twitter_url", ""),
+    }
 
 
 def write_csv(results: list[dict], output):
     """Write results as CSV (one row per founder)."""
     fieldnames = [
         "company", "slug", "batch", "website", "location",
+        "company_linkedin", "company_twitter",
         "founder_name", "founder_title", "linkedin", "twitter",
     ]
     writer = csv.DictWriter(output, fieldnames=fieldnames)
@@ -253,6 +261,8 @@ def write_csv(results: list[dict], output):
                 "batch": company["batch"],
                 "website": company["website"],
                 "location": company["location"],
+                "company_linkedin": company.get("company_linkedin", ""),
+                "company_twitter": company.get("company_twitter", ""),
                 "founder_name": founder["name"],
                 "founder_title": founder["title"],
                 "linkedin": founder["linkedin"],
@@ -290,18 +300,20 @@ def main():
 
     for company in tqdm(companies, desc="Scraping founders", file=sys.stderr):
         slug = company["slug"]
-        founders = scrape_founders(client, slug)
+        scraped = scrape_company_page(client, slug)
 
-        if founders:
+        if scraped and scraped["founders"]:
             results.append({
                 "name": company.get("name", ""),
                 "slug": slug,
                 "batch": company.get("batch", ""),
                 "website": company.get("website", ""),
                 "location": company.get("all_locations", ""),
-                "founders": founders,
+                "company_linkedin": scraped["company_linkedin"],
+                "company_twitter": scraped["company_twitter"],
+                "founders": scraped["founders"],
             })
-            total_founders += len(founders)
+            total_founders += len(scraped["founders"])
         else:
             failures += 1
 

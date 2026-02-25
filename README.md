@@ -74,6 +74,8 @@ The tool accepts several batch name formats:
     "batch": "S13",
     "website": "https://www.doordash.com",
     "location": "San Francisco, CA",
+    "company_linkedin": "https://www.linkedin.com/company/doordash",
+    "company_twitter": "https://twitter.com/doordash",
     "founders": [
       {
         "name": "Tony Xu",
@@ -88,7 +90,7 @@ The tool accepts several batch name formats:
 
 ### CSV
 
-One row per founder with columns: `company`, `slug`, `batch`, `website`, `location`, `founder_name`, `founder_title`, `linkedin`, `twitter`.
+One row per founder with columns: `company`, `slug`, `batch`, `website`, `location`, `company_linkedin`, `company_twitter`, `founder_name`, `founder_title`, `linkedin`, `twitter`.
 
 ## Rate Limiting
 
