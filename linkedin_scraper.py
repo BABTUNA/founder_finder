@@ -86,6 +86,16 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         # Fallback location from About page if main page missed it
         result["location"] = result["location"] or await _extract_location_about(page)
 
+        # --- Navigate to People page for employee locations ---
+        people_url = url.rstrip("/") + "/people/"
+        print(f"  Opening People page for employee locations...", file=sys.stderr)
+        await page.goto(people_url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(3000)
+        await _dismiss_overlays(page)
+
+        result["top_employee_locations"] = await _extract_employee_locations(page)
+        print(f"  Employee locations: {result['top_employee_locations']}", file=sys.stderr)
+
     except Exception as e:
         print(f"  Error scraping {url}: {e}", file=sys.stderr)
         result["error"] = str(e)
@@ -309,8 +319,54 @@ async def _extract_location_about(page) -> str:
         return ""
 
 
+async def _extract_employee_locations(page) -> list:
+    """Extract top 3 locations where employees live from People page."""
+    try:
+        locations = await page.evaluate("""() => {
+            const body = document.body.innerText;
+
+            // Method 1: "Where they live" section
+            const whereMatch = body.match(/Where they live[\\s\\n]+((?:[^\\n]+\\n?){1,10})/i);
+            if (whereMatch) {
+                const raw = whereMatch[1].trim();
+                const lines = raw.split('\\n').map(s => s.trim()).filter(s => {
+                    return s && !s.match(/^show more|^see |^\\d+$/i) && s.length < 100;
+                });
+                const result = [];
+                for (const line of lines) {
+                    if (line && result.length < 3) {
+                        result.push(line);
+                    }
+                }
+                return result;
+            }
+
+            // Method 2: location distribution in insights
+            const insightSections = document.querySelectorAll(
+                '[class*="insight"], [class*="distribution"]'
+            );
+            for (const section of insightSections) {
+                const text = (section.innerText || '').trim();
+                if (text.toLowerCase().includes('where')
+                    || text.toLowerCase().includes('location')) {
+                    const lines = text.split('\\n').map(s => s.trim()).filter(s => {
+                        return s && !s.match(/^where|^show|^see /i)
+                            && s.length > 2 && s.length < 100;
+                    });
+                    return lines.slice(0, 3);
+                }
+            }
+
+            return [];
+        }""")
+        return locations[:3] if locations else []
+    except Exception:
+        return []
+
+
 # ---------------------------------------------------------------------------
 # Main scraper orchestration
+
 
 # ---------------------------------------------------------------------------
 
