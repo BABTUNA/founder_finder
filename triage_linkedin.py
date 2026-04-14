@@ -148,6 +148,17 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def append_csv_row(path: Path, row: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    exists = path.exists()
+    fieldnames = ["url", "decision", "decided_at", "source"]
+    with path.open("a", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames)
+        if not exists:
+            w.writeheader()
+        w.writerow({k: row.get(k, "") for k in fieldnames})
+
+
 def main() -> int:
     args = parse_args()
     in_path = Path(args.input)
@@ -190,6 +201,12 @@ def main() -> int:
     for _ in open_persistent_chrome(profile_dir, headless=args.headless):
         # Triaging loop comes next commit
         break
+
+    out_path = Path(args.output)
+    append_csv_row(
+        out_path,
+        {"url": "https://www.linkedin.com/", "decision": "example", "decided_at": utc_now_iso(), "source": "example"},
+    )
     return 0
 
 
