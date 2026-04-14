@@ -61,6 +61,10 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         result["company_name"] = await _extract_company_name(page)
         print(f"  Company: {result['company_name']}", file=sys.stderr)
 
+        # --- Location (headquarters) ---
+        result["location"] = await _extract_location(page)
+        print(f"  Location: {result['location']}", file=sys.stderr)
+
     except Exception as e:
         print(f"  Error scraping {url}: {e}", file=sys.stderr)
         result["error"] = str(e)
@@ -108,8 +112,50 @@ async def _extract_company_name(page) -> str:
     return ""
 
 
+async def _extract_location(page) -> str:
+    """Extract headquarters location from main company page."""
+    try:
+        location_text = await page.evaluate("""() => {
+            // Method 1: subtitle area near company header
+            const subtitles = document.querySelectorAll(
+                '.top-card-layout__first-subline, [class*="top-card"] .top-card-layout__first-subline'
+            );
+            for (const el of subtitles) {
+                const text = el.innerText || '';
+                const lines = text.split('\\n').map(l => l.trim()).filter(Boolean);
+                for (const line of lines) {
+                    if (!line.match(/follower|employee|member/i) && line.includes(',')) {
+                        return line;
+                    }
+                }
+            }
+
+            // Method 2: dedicated headquarters element
+            const allText = document.body.innerText;
+            const hqMatch = allText.match(/(?:Headquarters|headquartered in|HQ)[:\\s]+([^\\n]+)/i);
+            if (hqMatch) return hqMatch[1].trim();
+
+            // Method 3: info section below header
+            const infoItems = document.querySelectorAll(
+                '.org-top-card-summary-info-list__info-item, [class*="info-item"]'
+            );
+            for (const item of infoItems) {
+                const text = (item.innerText || '').trim();
+                if (text.includes(',') && !text.match(/follower|employee|member|\\d+\\s/i)) {
+                    return text;
+                }
+            }
+
+            return '';
+        }""")
+        return location_text.strip() if location_text else ""
+    except Exception:
+        return ""
+
+
 # ---------------------------------------------------------------------------
 # Main scraper orchestration
+
 # ---------------------------------------------------------------------------
 
 
