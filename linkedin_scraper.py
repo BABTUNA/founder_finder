@@ -69,6 +69,10 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         result["associated_members"] = await _extract_members(page)
         print(f"  Members: {result['associated_members']}", file=sys.stderr)
 
+        # --- Job count ---
+        result["job_count"] = await _extract_job_count(page)
+        print(f"  Jobs: {result['job_count']}", file=sys.stderr)
+
     except Exception as e:
         print(f"  Error scraping {url}: {e}", file=sys.stderr)
         result["error"] = str(e)
@@ -190,6 +194,39 @@ async def _extract_members(page) -> str:
         return members.strip() if members else ""
     except Exception:
         return ""
+
+
+async def _extract_job_count(page) -> int:
+    """Extract the number of job openings."""
+    try:
+        count = await page.evaluate("""() => {
+            const body = document.body.innerText;
+
+            const patterns = [
+                /See all\s+(\d[\d,]*)\s+jobs?/i,
+                /(\d[\d,]*)\s+job openings?/i,
+                /(\d[\d,]*)\s+jobs? at/i,
+                /(\d[\d,]*)\s+open positions?/i,
+            ];
+
+            for (const pat of patterns) {
+                const m = body.match(pat);
+                if (m) return parseInt(m[1].replace(/,/g, ''), 10);
+            }
+
+            // Check job links/buttons
+            const jobLinks = document.querySelectorAll('a[href*="/jobs"]');
+            for (const link of jobLinks) {
+                const text = (link.innerText || '').trim();
+                const m = text.match(/(\d[\d,]*)/);
+                if (m) return parseInt(m[1].replace(/,/g, ''), 10);
+            }
+
+            return 0;
+        }""")
+        return count if isinstance(count, int) else 0
+    except Exception:
+        return 0
 
 
 # ---------------------------------------------------------------------------
