@@ -408,6 +408,51 @@ async def scrape(urls: list[str], headless: bool = False) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
+
+
+def write_output(results: list[dict], output_path: str | None, fmt: str):
+    """Write results to file or stdout."""
+    if not results:
+        print("No results to write.", file=sys.stderr)
+        return
+
+    if fmt == "csv":
+        import csv
+        fieldnames = [
+            "company_name", "url", "location", "job_count",
+            "associated_members", "top_categories", "top_employee_locations",
+            "scraped_at",
+        ]
+        # Flatten list fields for CSV
+        for r in results:
+            r["top_categories"] = "; ".join(r.get("top_categories", []))
+            r["top_employee_locations"] = "; ".join(r.get("top_employee_locations", []))
+
+        if output_path:
+            with open(output_path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+                writer.writeheader()
+                writer.writerows(results)
+        else:
+            writer = csv.DictWriter(sys.stdout, fieldnames=fieldnames, extrasaction="ignore")
+            writer.writeheader()
+            writer.writerows(results)
+    else:
+        if output_path:
+            with open(output_path, "w", encoding="utf-8") as f:
+                json.dump(results, f, indent=2, ensure_ascii=False)
+                f.write("\n")
+        else:
+            json.dump(results, sys.stdout, indent=2, ensure_ascii=False)
+            sys.stdout.write("\n")
+
+    if output_path:
+        print(f"Wrote {len(results)} results to {output_path}", file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -477,9 +522,7 @@ def main():
     results = asyncio.run(scrape(normalized, headless=args.headless))
 
     print(f"\nTotal: {len(results)} companies scraped", file=sys.stderr)
-    # TODO: write output
-    json.dump(results, sys.stdout, indent=2, ensure_ascii=False)
-    sys.stdout.write("\n")
+    write_output(results, args.output, args.format)
 
 
 if __name__ == "__main__":
