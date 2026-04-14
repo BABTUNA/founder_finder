@@ -26,6 +26,80 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from playwright.async_api import async_playwright
+
+
+# ---------------------------------------------------------------------------
+# Scraping logic
+# ---------------------------------------------------------------------------
+
+
+async def scrape_linkedin_company(page, url: str) -> dict:
+    """Navigate to a LinkedIn company page and extract key info."""
+    result = {
+        "url": url,
+        "company_name": "",
+        "location": "",
+        "job_count": 0,
+        "associated_members": "",
+        "top_categories": [],
+        "top_employee_locations": [],
+        "scraped_at": datetime.now().isoformat(),
+    }
+
+    print(f"\n  Navigating to {url} ...", file=sys.stderr)
+
+    try:
+        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(3000)
+        # TODO: extract fields
+    except Exception as e:
+        print(f"  Error scraping {url}: {e}", file=sys.stderr)
+        result["error"] = str(e)
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Main scraper orchestration
+# ---------------------------------------------------------------------------
+
+
+async def scrape(urls: list[str], headless: bool = False) -> list[dict]:
+    """Open each LinkedIn company page in a browser and scrape info."""
+    results = []
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=headless)
+        context = await browser.new_context(
+            viewport={"width": 1400, "height": 900},
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/125.0.0.0 Safari/537.36"
+            ),
+        )
+        page = await context.new_page()
+
+        try:
+            for i, url in enumerate(urls):
+                print(f"\n[{i+1}/{len(urls)}] Scraping: {url}", file=sys.stderr)
+                data = await scrape_linkedin_company(page, url)
+                results.append(data)
+
+                # Brief pause between companies to avoid rate limits
+                if i < len(urls) - 1:
+                    print("  Waiting before next company...", file=sys.stderr)
+                    await page.wait_for_timeout(3000)
+
+        except KeyboardInterrupt:
+            print(f"\nInterrupted — saving {len(results)} results so far.",
+                  file=sys.stderr)
+        finally:
+            await browser.close()
+
+    return results
+
 
 # ---------------------------------------------------------------------------
 # CLI
@@ -94,8 +168,12 @@ def main():
         normalized.append(u)
 
     print(f"Scraping {len(normalized)} LinkedIn company page(s)...", file=sys.stderr)
-    # TODO: call scraper
-    print("Scraper not yet implemented.", file=sys.stderr)
+    results = asyncio.run(scrape(normalized, headless=args.headless))
+
+    print(f"\nTotal: {len(results)} companies scraped", file=sys.stderr)
+    # TODO: write output
+    json.dump(results, sys.stdout, indent=2, ensure_ascii=False)
+    sys.stdout.write("\n")
 
 
 if __name__ == "__main__":
