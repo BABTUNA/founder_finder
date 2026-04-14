@@ -204,8 +204,25 @@ def _connect_cdp_page(p, cdp_url: str):
             file=sys.stderr,
         )
         print(
-            "  Start Chrome with remote debugging first (see start_chrome_debug.bat), "
-            "then run again with --cdp.",
+            "  Nothing is listening on that port yet. Do this:",
+            file=sys.stderr,
+        )
+        print(
+            "    1) Run start_chrome_debug.bat from this repo (or start Chrome with "
+            "--remote-debugging-port=9222 on the same URL host/port).",
+            file=sys.stderr,
+        )
+        print(
+            "    2) Wait until Chrome opens and stay running.",
+            file=sys.stderr,
+        )
+        print(
+            "    3) In another terminal, run triage_linkedin.py again with --cdp.",
+            file=sys.stderr,
+        )
+        print(
+            "  Check: in PowerShell,  Test-NetConnection 127.0.0.1 -Port 9222  "
+            "should show TcpTestSucceeded : True",
             file=sys.stderr,
         )
         raise SystemExit(2) from e
