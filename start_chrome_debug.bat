@@ -1,5 +1,6 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
+REM curl without -m can hang ~30s+ per try when the port is closed (looks like "nothing happens").
 REM Launch Chrome with remote debugging so Playwright can connect_over_cdp.
 REM Must use ONE LINE for start+chrome+args — multi-line ^ continuations often drop flags on Windows.
 
@@ -26,13 +27,17 @@ echo Launching Chrome on debug port 9222...
 REM Window title is first quoted arg to START; exe path must be quoted; user-data-dir needs quotes (spaces in "User Data").
 start "" "%CHROME%" --remote-debugging-port=9222 --user-data-dir="%UD%" --profile-directory=Default --no-first-run
 
-echo Waiting until http://127.0.0.1:9222 responds...
+echo Waiting until http://127.0.0.1:9222 responds ^(fast timeout each try^)...
 set /a n=0
 :waitloop
-curl.exe -s -f "http://127.0.0.1:9222/json/version" >nul 2>&1
+REM -m and --connect-timeout: fail in ~2s instead of hanging minutes when port is closed
+curl.exe -s -f -m 2 --connect-timeout 2 "http://127.0.0.1:9222/json/version" >nul 2>&1
 if not errorlevel 1 goto debugok
 set /a n+=1
-if %n% geq 45 goto debugfail
+if !n! equ 1 echo   Polling... ^(Chrome may take a few seconds after start^)
+set /a r=!n! %% 5
+if !r! equ 0 echo   ... still waiting, attempt !n!/45
+if !n! geq 45 goto debugfail
 timeout /t 1 /nobreak >nul
 goto waitloop
 
