@@ -28,6 +28,9 @@ from playwright.sync_api import sync_playwright
 DEFAULT_OUTPUT = "triage.csv"
 DEFAULT_PROGRESS = "triage_progress.json"
 
+REVIEW_LATER = "review_later"
+SKIP = "skip"
+
 
 @dataclass(frozen=True)
 class TriageItem:
@@ -126,6 +129,25 @@ def open_persistent_chrome(profile_dir: Path, headless: bool):
             context.close()
 
 
+def load_progress(path: Path) -> dict:
+    if path.exists():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict) and isinstance(data.get("decisions", {}), dict):
+                return data
+        except Exception:
+            pass
+    return {"decisions": {}}
+
+
+def save_progress(path: Path, progress: dict) -> None:
+    path.write_text(json.dumps(progress, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 def main() -> int:
     args = parse_args()
     in_path = Path(args.input)
@@ -152,7 +174,21 @@ def main() -> int:
     print(f"Loaded {len(items)} URL(s).", file=sys.stderr)
     print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
     print("Next: open browser + key controls.", file=sys.stderr)
+
+    progress_path = Path(args.progress)
+    progress = load_progress(progress_path)
+    if args.resume:
+        decided = set(progress["decisions"].keys())
+        items = [it for it in items if it.url not in decided]
+
+    if not items:
+        print("Nothing to triage (all URLs already decided).", file=sys.stderr)
+        return 0
+
+    print(f"Triage queue: {len(items)} URL(s).", file=sys.stderr)
+
     for _ in open_persistent_chrome(profile_dir, headless=args.headless):
+        # Triaging loop comes next commit
         break
     return 0
 
