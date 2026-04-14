@@ -2,18 +2,23 @@
 """
 LinkedIn Company Scraper — Playwright Browser Automation
 
-Opens a real Chrome browser to a LinkedIn company page and scrapes:
+Uses your li_at cookie (from .env) to scrape LinkedIn company pages.
+
+Extracts:
   - Company location (headquarters)
   - Number of job openings (if any)
   - Total associated members
   - Top 3 categories (specialties / industry)
   - Top 3 locations where employees live
 
+Setup:
+    1. Get your li_at cookie from Chrome DevTools → Application → Cookies → linkedin.com
+    2. Add to .env:  LINKEDIN_LI_AT=AQEDAx...
+
 Usage:
     python linkedin_scraper.py "https://www.linkedin.com/company/openai"
-    python linkedin_scraper.py "https://www.linkedin.com/company/openai" --headless
-    python linkedin_scraper.py "https://www.linkedin.com/company/openai" -o company_info.json
     python linkedin_scraper.py --file companies.txt -o results.json
+    python linkedin_scraper.py --file companies.txt -o results.json --headless
 
 Dependencies:
     pip install playwright && playwright install chromium
@@ -22,6 +27,8 @@ Dependencies:
 import argparse
 import asyncio
 import json
+import os
+import random
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -146,37 +153,31 @@ async def _extract_company_name(page) -> str:
 async def _extract_location(page) -> str:
     """Extract headquarters location from main company page."""
     try:
-        location_text = await page.evaluate("""() => {
-            // Method 1: subtitle area near company header
+        location_text = await page.evaluate(r"""() => {
             const subtitles = document.querySelectorAll(
                 '.top-card-layout__first-subline, [class*="top-card"] .top-card-layout__first-subline'
             );
             for (const el of subtitles) {
                 const text = el.innerText || '';
-                const lines = text.split('\\n').map(l => l.trim()).filter(Boolean);
+                const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
                 for (const line of lines) {
                     if (!line.match(/follower|employee|member/i) && line.includes(',')) {
                         return line;
                     }
                 }
             }
-
-            // Method 2: dedicated headquarters element
             const allText = document.body.innerText;
-            const hqMatch = allText.match(/(?:Headquarters|headquartered in|HQ)[:\\s]+([^\\n]+)/i);
+            const hqMatch = allText.match(/(?:Headquarters|headquartered in|HQ)[:\s]+([^\n]+)/i);
             if (hqMatch) return hqMatch[1].trim();
-
-            // Method 3: info section below header
             const infoItems = document.querySelectorAll(
                 '.org-top-card-summary-info-list__info-item, [class*="info-item"]'
             );
             for (const item of infoItems) {
                 const text = (item.innerText || '').trim();
-                if (text.includes(',') && !text.match(/follower|employee|member|\\d+\\s/i)) {
+                if (text.includes(',') && !text.match(/follower|employee|member|\d+\s/i)) {
                     return text;
                 }
             }
-
             return '';
         }""")
         return location_text.strip() if location_text else ""
@@ -187,22 +188,18 @@ async def _extract_location(page) -> str:
 async def _extract_members(page) -> str:
     """Extract associated members count."""
     try:
-        members = await page.evaluate("""() => {
+        members = await page.evaluate(r"""() => {
             const body = document.body.innerText;
-
             const patterns = [
                 /(\d[\d,]+)\s+associated\s+member/i,
                 /(\d[\d,]+)\s+member/i,
                 /(\d[\d,]+)\s+employees? on LinkedIn/i,
                 /(\d[\d,]+)\s+employees?/i,
             ];
-
             for (const pat of patterns) {
                 const m = body.match(pat);
                 if (m) return m[1];
             }
-
-            // Check specific elements
             const els = document.querySelectorAll(
                 '[class*="face-pile"], [class*="member"], [class*="employee"]'
             );
@@ -211,7 +208,6 @@ async def _extract_members(page) -> str:
                 const m = text.match(/(\d[\d,]+)/);
                 if (m) return m[1];
             }
-
             return '';
         }""")
         return members.strip() if members else ""
@@ -222,29 +218,24 @@ async def _extract_members(page) -> str:
 async def _extract_job_count(page) -> int:
     """Extract the number of job openings."""
     try:
-        count = await page.evaluate("""() => {
+        count = await page.evaluate(r"""() => {
             const body = document.body.innerText;
-
             const patterns = [
                 /See all\s+(\d[\d,]*)\s+jobs?/i,
                 /(\d[\d,]*)\s+job openings?/i,
                 /(\d[\d,]*)\s+jobs? at/i,
                 /(\d[\d,]*)\s+open positions?/i,
             ];
-
             for (const pat of patterns) {
                 const m = body.match(pat);
                 if (m) return parseInt(m[1].replace(/,/g, ''), 10);
             }
-
-            // Check job links/buttons
             const jobLinks = document.querySelectorAll('a[href*="/jobs"]');
             for (const link of jobLinks) {
                 const text = (link.innerText || '').trim();
                 const m = text.match(/(\d[\d,]*)/);
                 if (m) return parseInt(m[1].replace(/,/g, ''), 10);
             }
-
             return 0;
         }""")
         return count if isinstance(count, int) else 0
@@ -255,29 +246,23 @@ async def _extract_job_count(page) -> int:
 async def _extract_categories(page) -> list:
     """Extract top 3 specialties/categories from the About page."""
     try:
-        cats = await page.evaluate("""() => {
+        cats = await page.evaluate(r"""() => {
             const body = document.body.innerText;
-
-            // Method 1: "Specialties" section
             const specMatch = body.match(
-                /Specialties[\\s\\n]+([\\s\\S]*?)(?=\\n\\n|Company size|Headquarters|Founded|Type|$)/i
+                /Specialties[\s\n]+([\s\S]*?)(?=\n\n|Company size|Headquarters|Founded|Type|$)/i
             );
             if (specMatch) {
                 const raw = specMatch[1].trim();
-                const items = raw.split(/[,\\n]/)
+                const items = raw.split(/[,\n]/)
                     .map(s => s.trim())
                     .filter(s => s && s.length < 80);
                 return items.slice(0, 3);
             }
-
-            // Method 2: "Industries" or "Industry"
-            const indMatch = body.match(/Industr(?:y|ies)[\\s\\n]+([^\\n]+)/i);
+            const indMatch = body.match(/Industr(?:y|ies)[\s\n]+([^\n]+)/i);
             if (indMatch) {
                 const items = indMatch[1].split(',').map(s => s.trim()).filter(Boolean);
                 return items.slice(0, 3);
             }
-
-            // Method 3: category tags
             const tags = document.querySelectorAll(
                 '[class*="tag"], [class*="category"], [class*="industry"]'
             );
@@ -299,19 +284,14 @@ async def _extract_categories(page) -> list:
 async def _extract_location_about(page) -> str:
     """Extract headquarters location from the About page as fallback."""
     try:
-        loc = await page.evaluate("""() => {
+        loc = await page.evaluate(r"""() => {
             const allText = document.body.innerText;
-
-            // Look for "Headquarters" label
-            const hqMatch = allText.match(/Headquarters[\\s\\n]+([^\\n]+)/i);
+            const hqMatch = allText.match(/Headquarters[\s\n]+([^\n]+)/i);
             if (hqMatch) return hqMatch[1].trim();
-
-            // Look for "Locations" section
             const locMatch = allText.match(
-                /Locations?[\\s\\n]+(?:Primary[\\s\\n]+)?([^\\n]+)/i
+                /Locations?[\s\n]+(?:Primary[\s\n]+)?([^\n]+)/i
             );
             if (locMatch) return locMatch[1].trim();
-
             return '';
         }""")
         return loc.strip() if loc else ""
@@ -322,26 +302,20 @@ async def _extract_location_about(page) -> str:
 async def _extract_employee_locations(page) -> list:
     """Extract top 3 locations where employees live from People page."""
     try:
-        locations = await page.evaluate("""() => {
+        locations = await page.evaluate(r"""() => {
             const body = document.body.innerText;
-
-            // Method 1: "Where they live" section
-            const whereMatch = body.match(/Where they live[\\s\\n]+((?:[^\\n]+\\n?){1,10})/i);
+            const whereMatch = body.match(/Where they live[\s\n]+((?:[^\n]+\n?){1,10})/i);
             if (whereMatch) {
                 const raw = whereMatch[1].trim();
-                const lines = raw.split('\\n').map(s => s.trim()).filter(s => {
-                    return s && !s.match(/^show more|^see |^\\d+$/i) && s.length < 100;
+                const lines = raw.split('\n').map(s => s.trim()).filter(s => {
+                    return s && !s.match(/^show more|^see |^\d+$/i) && s.length < 100;
                 });
                 const result = [];
                 for (const line of lines) {
-                    if (line && result.length < 3) {
-                        result.push(line);
-                    }
+                    if (line && result.length < 3) result.push(line);
                 }
                 return result;
             }
-
-            // Method 2: location distribution in insights
             const insightSections = document.querySelectorAll(
                 '[class*="insight"], [class*="distribution"]'
             );
@@ -349,14 +323,13 @@ async def _extract_employee_locations(page) -> list:
                 const text = (section.innerText || '').trim();
                 if (text.toLowerCase().includes('where')
                     || text.toLowerCase().includes('location')) {
-                    const lines = text.split('\\n').map(s => s.trim()).filter(s => {
+                    const lines = text.split('\n').map(s => s.trim()).filter(s => {
                         return s && !s.match(/^where|^show|^see /i)
                             && s.length > 2 && s.length < 100;
                     });
                     return lines.slice(0, 3);
                 }
             }
-
             return [];
         }""")
         return locations[:3] if locations else []
@@ -365,32 +338,86 @@ async def _extract_employee_locations(page) -> list:
 
 
 # ---------------------------------------------------------------------------
-# Main scraper orchestration
-
-
+# Main scraper — launches Playwright with li_at cookie from .env
 # ---------------------------------------------------------------------------
 
 
+def _load_li_at() -> str:
+    """Load the li_at cookie value from .env file."""
+    # Check env var first
+    li_at = os.environ.get("LINKEDIN_LI_AT", "").strip()
+    if li_at:
+        return li_at
+
+    # Read .env file manually (no extra dependency)
+    env_path = Path(__file__).parent / ".env"
+    if env_path.exists():
+        for line in env_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if line.startswith("LINKEDIN_LI_AT="):
+                return line.split("=", 1)[1].strip().strip('"').strip("'")
+
+    return ""
+
+
 async def scrape(urls: list[str], headless: bool = False, profile_dir: str | None = None) -> list[dict]:
-    """Open each LinkedIn company page in a browser and scrape info."""
+    """Scrape LinkedIn company pages using either a Chrome profile or li_at cookie."""
     results = []
 
-    # Default to the standard Windows Chrome profile
-    if profile_dir is None:
-        profile_dir = str(Path.home() / "AppData" / "Local" / "Google" / "Chrome" / "User Data")
-
-    print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
-
     async with async_playwright() as p:
-        # Use persistent context to reuse the real Chrome profile (logged-in session)
-        context = await p.chromium.launch_persistent_context(
-            profile_dir,
-            headless=headless,
-            channel="chrome",
-            viewport={"width": 1400, "height": 900},
-            args=["--disable-blink-features=AutomationControlled"],
-        )
-        page = context.pages[0] if context.pages else await context.new_page()
+        browser = None
+
+        if profile_dir:
+            print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
+            context = await p.chromium.launch_persistent_context(
+                profile_dir,
+                headless=headless,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"],
+                viewport={"width": 1400, "height": 900},
+            )
+            page = context.pages[0] if context.pages else await context.new_page()
+        else:
+            li_at = _load_li_at()
+            if not li_at:
+                print(
+                    "Error: LINKEDIN_LI_AT not found in .env\n"
+                    "Get it from Chrome DevTools → Application → Cookies → linkedin.com → li_at\n"
+                    'Then add to .env:  LINKEDIN_LI_AT=AQEDAx...\n',
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+            print(f"Using li_at cookie: {li_at[:12]}...\n", file=sys.stderr)
+            browser = await p.chromium.launch(
+                headless=headless,
+                args=["--disable-blink-features=AutomationControlled"],
+            )
+            context = await browser.new_context(viewport={"width": 1400, "height": 900})
+
+            await context.add_cookies(
+                [
+                    {
+                        "name": "li_at",
+                        "value": li_at,
+                        "domain": ".linkedin.com",
+                        "path": "/",
+                        "secure": True,
+                        "httpOnly": True,
+                    }
+                ]
+            )
+            print("Cookie injected — using your LinkedIn session.\n", file=sys.stderr)
+            page = await context.new_page()
+
+        # Warm up the session — visit feed first so LinkedIn sees normal activity
+        print("Warming up session (visiting feed)...", file=sys.stderr)
+        try:
+            await page.goto("https://www.linkedin.com/feed/",
+                            wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_timeout(3000)
+        except Exception:
+            print("  Feed warmup timed out, continuing anyway...", file=sys.stderr)
 
         try:
             for i, url in enumerate(urls):
@@ -401,13 +428,15 @@ async def scrape(urls: list[str], headless: bool = False, profile_dir: str | Non
                 # Brief pause between companies to avoid rate limits
                 if i < len(urls) - 1:
                     print("  Waiting before next company...", file=sys.stderr)
-                    await page.wait_for_timeout(3000)
+                    await page.wait_for_timeout(4000)
 
         except KeyboardInterrupt:
             print(f"\nInterrupted — saving {len(results)} results so far.",
                   file=sys.stderr)
         finally:
             await context.close()
+            if browser is not None:
+                await browser.close()
 
     return results
 
@@ -430,7 +459,6 @@ def write_output(results: list[dict], output_path: str | None, fmt: str):
             "associated_members", "top_categories", "top_employee_locations",
             "scraped_at",
         ]
-        # Flatten list fields for CSV
         for r in results:
             r["top_categories"] = "; ".join(r.get("top_categories", []))
             r["top_employee_locations"] = "; ".join(r.get("top_employee_locations", []))
@@ -464,7 +492,7 @@ def write_output(results: list[dict], output_path: str | None, fmt: str):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="LinkedIn company page scraper — Playwright browser automation."
+        description="LinkedIn company page scraper — uses your Chrome cookies."
     )
     parser.add_argument(
         "urls",
@@ -505,7 +533,6 @@ def main():
 
     urls = list(args.urls or [])
 
-    # Load URLs from file if provided
     if args.file:
         path = Path(args.file)
         if not path.exists():
@@ -522,7 +549,6 @@ def main():
               file=sys.stderr)
         sys.exit(1)
 
-    # Normalize URLs
     normalized = []
     for u in urls:
         u = u.strip().rstrip("/")
