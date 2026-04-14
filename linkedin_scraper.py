@@ -41,6 +41,23 @@ from playwright.async_api import async_playwright
 # ---------------------------------------------------------------------------
 
 
+async def _goto_with_retry(page, url: str, retries: int = 3) -> bool:
+    """Navigate to a URL with retry + exponential backoff on failure."""
+    for attempt in range(retries):
+        try:
+            await page.goto(url, wait_until="domcontentloaded", timeout=45000)
+            await page.wait_for_timeout(random.randint(2000, 4000))
+            return True
+        except Exception as e:
+            if attempt < retries - 1:
+                wait = (attempt + 1) * 10
+                print(f"  Retry {attempt + 1}/{retries} in {wait}s — {e}", file=sys.stderr)
+                await page.wait_for_timeout(wait * 1000)
+            else:
+                raise
+    return False
+
+
 async def scrape_linkedin_company(page, url: str) -> dict:
     """Navigate to a LinkedIn company page and extract key info."""
     result = {
@@ -57,8 +74,7 @@ async def scrape_linkedin_company(page, url: str) -> dict:
     print(f"\n  Navigating to {url} ...", file=sys.stderr)
 
     try:
-        await page.goto(url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(3000)
+        await _goto_with_retry(page, url)
 
         # Dismiss any login modals / overlays that might pop up
         await _dismiss_overlays(page)
@@ -83,8 +99,7 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         # --- Navigate to About page for categories / specialties ---
         about_url = url.rstrip("/") + "/about/"
         print(f"  Opening About page...", file=sys.stderr)
-        await page.goto(about_url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(3000)
+        await _goto_with_retry(page, about_url)
         await _dismiss_overlays(page)
 
         result["top_categories"] = await _extract_categories(page)
@@ -96,8 +111,7 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         # --- Navigate to People page for employee locations ---
         people_url = url.rstrip("/") + "/people/"
         print(f"  Opening People page for employee locations...", file=sys.stderr)
-        await page.goto(people_url, wait_until="domcontentloaded", timeout=30000)
-        await page.wait_for_timeout(3000)
+        await _goto_with_retry(page, people_url)
         await _dismiss_overlays(page)
 
         result["top_employee_locations"] = await _extract_employee_locations(page)
