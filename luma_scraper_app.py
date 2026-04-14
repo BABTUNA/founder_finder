@@ -32,7 +32,10 @@ from playwright.async_api import async_playwright
 # Constants
 # ---------------------------------------------------------------------------
 
-LUMA_MAP_URL = "https://lu.ma/category/tech/map"
+CATEGORY_URLS = {
+    "tech": "https://lu.ma/category/tech/map",
+    "ai": "https://luma.com/category/ai/map",
+}
 
 FIELDNAMES = [
     "event_name", "event_url", "start_at", "end_at", "timezone",
@@ -49,20 +52,14 @@ FIELDNAMES = [
 CITY_HUBS = [
     ("San Francisco", 37.77, -122.42),
     ("New York", 40.71, -74.01),
-    ("London", 51.51, -0.13),
-    ("Berlin", 52.52, 13.41),
-    ("Paris", 48.86, 2.35),
-    ("Singapore", 1.35, 103.82),
-    ("Tokyo", 35.68, 139.65),
     ("Austin", 30.27, -97.74),
     ("Los Angeles", 34.05, -118.24),
-    ("Toronto", 43.65, -79.38),
-    ("Amsterdam", 52.37, 4.90),
-    ("Dubai", 25.20, 55.27),
-    ("Sydney", -33.87, 151.21),
-    ("Bangalore", 12.97, 77.59),
-    ("Seoul", 37.57, 126.98),
-    ("Tel Aviv", 32.09, 34.78),
+    ("Seattle", 47.61, -122.33),
+    ("Boston", 42.36, -71.06),
+    ("Chicago", 41.88, -87.63),
+    ("Miami", 25.76, -80.19),
+    ("Denver", 39.74, -104.99),
+    ("Washington DC", 38.91, -77.04),
 ]
 
 # ---------------------------------------------------------------------------
@@ -110,8 +107,10 @@ def parse_event_entry(entry: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-async def scrape(cities: list[tuple], headless: bool = False) -> list[dict]:
+async def scrape(cities: list[tuple], headless: bool = False, categories: list[str] | None = None) -> list[dict]:
     """Open Luma map in a browser, navigate to cities, and capture events."""
+    if categories is None:
+        categories = ["tech"]
     captured: dict[str, dict] = {}
 
     async with async_playwright() as p:
@@ -134,48 +133,50 @@ async def scrape(cities: list[tuple], headless: bool = False) -> list[dict]:
 
         page.on("response", on_response)
 
-        print(f"Opening {LUMA_MAP_URL} ...", file=sys.stderr)
-        await page.goto(LUMA_MAP_URL, wait_until="networkidle")
-
-        # Wait for the Mapbox GL map to be ready
         try:
-            await page.wait_for_function(
-                """() => {
-                    const canvases = document.querySelectorAll('.mapboxgl-canvas');
-                    return canvases.length > 0;
-                }""",
-                timeout=15000,
-            )
-        except Exception:
-            print("Warning: Mapbox canvas not detected, continuing anyway...",
-                  file=sys.stderr)
+            for cat_idx, category in enumerate(categories):
+                map_url = CATEGORY_URLS[category]
+                print(f"\nOpening {map_url} (category: {category}) ...", file=sys.stderr)
+                await page.goto(map_url, wait_until="networkidle")
 
-        # Give the initial map load a moment to settle
-        await page.wait_for_timeout(3000)
-        before = len(captured)
-        print(f"  Initial load captured {before} events", file=sys.stderr)
+                # Wait for the Mapbox GL map to be ready
+                try:
+                    await page.wait_for_function(
+                        """() => {
+                            const canvases = document.querySelectorAll('.mapboxgl-canvas');
+                            return canvases.length > 0;
+                        }""",
+                        timeout=15000,
+                    )
+                except Exception:
+                    print("Warning: Mapbox canvas not detected, continuing anyway...",
+                          file=sys.stderr)
 
-        try:
-            for name, lat, lng in cities:
-                print(f"\nNavigating to {name} ({lat}, {lng})...", file=sys.stderr)
-                before_city = len(captured)
+                # Give the initial map load a moment to settle
+                await page.wait_for_timeout(3000)
+                before = len(captured)
+                print(f"  Initial load captured {before} events", file=sys.stderr)
 
-                # Try multiple zoom levels to maximize coverage
-                for zoom in [12, 13, 14]:
-                    prev = len(captured)
-                    await _fly_to(page, lat, lng, zoom=zoom)
-                    await page.wait_for_timeout(3500)
+                for name, lat, lng in cities:
+                    print(f"\nNavigating to {name} ({lat}, {lng})...", file=sys.stderr)
+                    before_city = len(captured)
 
-                    # Click each marker and scroll the sidebar it opens
-                    await _click_and_scroll_markers(page, captured)
+                    # Try multiple zoom levels to maximize coverage
+                    for zoom in [12]:
+                        prev = len(captured)
+                        await _fly_to(page, lat, lng, zoom=zoom)
+                        await page.wait_for_timeout(5500)
 
-                    gained = len(captured) - prev
-                    if zoom > 12 and gained == 0:
-                        break  # No new events at higher zoom, stop
+                        # Click each marker and scroll the sidebar it opens
+                        await _click_and_scroll_markers(page, captured)
 
-                new_count = len(captured) - before_city
-                print(f"  {name}: +{new_count} new events ({len(captured)} total)",
-                      file=sys.stderr)
+                        gained = len(captured) - prev
+                        if zoom > 12 and gained == 0:
+                            break  # No new events at higher zoom, stop
+
+                    new_count = len(captured) - before_city
+                    print(f"  {name}: +{new_count} new events ({len(captured)} total)",
+                          file=sys.stderr)
         except (KeyboardInterrupt, Exception) as e:
             if not isinstance(e, KeyboardInterrupt):
                 print(f"\nError: {e}", file=sys.stderr)
@@ -444,6 +445,12 @@ def parse_args():
         description="Luma map event scraper — Playwright browser automation."
     )
     parser.add_argument(
+        "--category",
+        choices=["tech", "ai", "both"],
+        default="tech",
+        help="Event category to scrape (default: tech)",
+    )
+    parser.add_argument(
         "--city",
         help="Scrape a single city (name must match a hub, case-insensitive)",
     )
@@ -500,9 +507,10 @@ def main():
     else:
         cities = CITY_HUBS
 
-    print(f"Scraping {len(cities)} cities...", file=sys.stderr)
+    categories = list(CATEGORY_URLS.keys()) if args.category == "both" else [args.category]
+    print(f"Scraping {len(cities)} cities (categories: {', '.join(categories)})...", file=sys.stderr)
 
-    events = asyncio.run(scrape(cities, headless=args.headless))
+    events = asyncio.run(scrape(cities, headless=args.headless, categories=categories))
 
     print(f"\nTotal: {len(events)} unique events", file=sys.stderr)
     write_output(events, args.output, args.format)
