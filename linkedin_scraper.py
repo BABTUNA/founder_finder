@@ -73,6 +73,19 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         result["job_count"] = await _extract_job_count(page)
         print(f"  Jobs: {result['job_count']}", file=sys.stderr)
 
+        # --- Navigate to About page for categories / specialties ---
+        about_url = url.rstrip("/") + "/about/"
+        print(f"  Opening About page...", file=sys.stderr)
+        await page.goto(about_url, wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(3000)
+        await _dismiss_overlays(page)
+
+        result["top_categories"] = await _extract_categories(page)
+        print(f"  Categories: {result['top_categories']}", file=sys.stderr)
+
+        # Fallback location from About page if main page missed it
+        result["location"] = result["location"] or await _extract_location_about(page)
+
     except Exception as e:
         print(f"  Error scraping {url}: {e}", file=sys.stderr)
         result["error"] = str(e)
@@ -227,6 +240,73 @@ async def _extract_job_count(page) -> int:
         return count if isinstance(count, int) else 0
     except Exception:
         return 0
+
+
+async def _extract_categories(page) -> list:
+    """Extract top 3 specialties/categories from the About page."""
+    try:
+        cats = await page.evaluate("""() => {
+            const body = document.body.innerText;
+
+            // Method 1: "Specialties" section
+            const specMatch = body.match(
+                /Specialties[\\s\\n]+([\\s\\S]*?)(?=\\n\\n|Company size|Headquarters|Founded|Type|$)/i
+            );
+            if (specMatch) {
+                const raw = specMatch[1].trim();
+                const items = raw.split(/[,\\n]/)
+                    .map(s => s.trim())
+                    .filter(s => s && s.length < 80);
+                return items.slice(0, 3);
+            }
+
+            // Method 2: "Industries" or "Industry"
+            const indMatch = body.match(/Industr(?:y|ies)[\\s\\n]+([^\\n]+)/i);
+            if (indMatch) {
+                const items = indMatch[1].split(',').map(s => s.trim()).filter(Boolean);
+                return items.slice(0, 3);
+            }
+
+            // Method 3: category tags
+            const tags = document.querySelectorAll(
+                '[class*="tag"], [class*="category"], [class*="industry"]'
+            );
+            const result = [];
+            for (const tag of tags) {
+                const text = (tag.innerText || '').trim();
+                if (text && text.length < 60 && !text.match(/follow|see|show/i)) {
+                    result.push(text);
+                }
+                if (result.length >= 3) break;
+            }
+            return result;
+        }""")
+        return cats[:3] if cats else []
+    except Exception:
+        return []
+
+
+async def _extract_location_about(page) -> str:
+    """Extract headquarters location from the About page as fallback."""
+    try:
+        loc = await page.evaluate("""() => {
+            const allText = document.body.innerText;
+
+            // Look for "Headquarters" label
+            const hqMatch = allText.match(/Headquarters[\\s\\n]+([^\\n]+)/i);
+            if (hqMatch) return hqMatch[1].trim();
+
+            // Look for "Locations" section
+            const locMatch = allText.match(
+                /Locations?[\\s\\n]+(?:Primary[\\s\\n]+)?([^\\n]+)/i
+            );
+            if (locMatch) return locMatch[1].trim();
+
+            return '';
+        }""")
+        return loc.strip() if loc else ""
+    except Exception:
+        return ""
 
 
 # ---------------------------------------------------------------------------
