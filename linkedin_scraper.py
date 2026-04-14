@@ -439,10 +439,11 @@ async def scrape(urls: list[str], headless: bool = False, profile_dir: str | Non
                 data = await scrape_linkedin_company(page, url)
                 results.append(data)
 
-                # Brief pause between companies to avoid rate limits
+                # Random human-like pause between companies (8-15 seconds)
                 if i < len(urls) - 1:
-                    print("  Waiting before next company...", file=sys.stderr)
-                    await page.wait_for_timeout(4000)
+                    delay = random.randint(8, 15)
+                    print(f"  Waiting {delay}s before next company...", file=sys.stderr)
+                    await page.wait_for_timeout(delay * 1000)
 
         except KeyboardInterrupt:
             print(f"\nInterrupted — saving {len(results)} results so far.",
