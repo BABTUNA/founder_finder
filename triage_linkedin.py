@@ -252,6 +252,13 @@ def main() -> int:
 
     try:
         items = load_items(in_path)
+    except FileNotFoundError:
+        print(f"Input file not found: {in_path.resolve()}", file=sys.stderr)
+        print(
+            "Create that file (one LinkedIn URL per line) or pass a real path to .txt / .csv / .json.",
+            file=sys.stderr,
+        )
+        return 2
     except Exception as e:
         print(f"Error loading input: {e}", file=sys.stderr)
         return 2
