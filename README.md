@@ -13,7 +13,7 @@ A command-line tool to extract founder LinkedIn and Twitter/X profiles from [Y C
 Requires Python 3.10+.
 
 ```bash
-pip install httpx tqdm
+pip install -r requirements.txt
 ```
 
 ## Usage
