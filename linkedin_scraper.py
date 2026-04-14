@@ -371,21 +371,26 @@ async def _extract_employee_locations(page) -> list:
 # ---------------------------------------------------------------------------
 
 
-async def scrape(urls: list[str], headless: bool = False) -> list[dict]:
+async def scrape(urls: list[str], headless: bool = False, profile_dir: str | None = None) -> list[dict]:
     """Open each LinkedIn company page in a browser and scrape info."""
     results = []
 
+    # Default to the standard Windows Chrome profile
+    if profile_dir is None:
+        profile_dir = str(Path.home() / "AppData" / "Local" / "Google" / "Chrome" / "User Data")
+
+    print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
+
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless)
-        context = await browser.new_context(
+        # Use persistent context to reuse the real Chrome profile (logged-in session)
+        context = await p.chromium.launch_persistent_context(
+            profile_dir,
+            headless=headless,
+            channel="chrome",
             viewport={"width": 1400, "height": 900},
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/125.0.0.0 Safari/537.36"
-            ),
+            args=["--disable-blink-features=AutomationControlled"],
         )
-        page = await context.new_page()
+        page = context.pages[0] if context.pages else await context.new_page()
 
         try:
             for i, url in enumerate(urls):
@@ -402,7 +407,7 @@ async def scrape(urls: list[str], headless: bool = False) -> list[dict]:
             print(f"\nInterrupted — saving {len(results)} results so far.",
                   file=sys.stderr)
         finally:
-            await browser.close()
+            await context.close()
 
     return results
 
@@ -485,6 +490,13 @@ def parse_args():
         default="json",
         help="Output format (default: json)",
     )
+    parser.add_argument(
+        "--profile",
+        help=(
+            "Path to Chrome User Data directory "
+            "(default: ~/AppData/Local/Google/Chrome/User Data)"
+        ),
+    )
     return parser.parse_args()
 
 
@@ -519,7 +531,7 @@ def main():
         normalized.append(u)
 
     print(f"Scraping {len(normalized)} LinkedIn company page(s)...", file=sys.stderr)
-    results = asyncio.run(scrape(normalized, headless=args.headless))
+    results = asyncio.run(scrape(normalized, headless=args.headless, profile_dir=args.profile))
 
     print(f"\nTotal: {len(results)} companies scraped", file=sys.stderr)
     write_output(results, args.output, args.format)

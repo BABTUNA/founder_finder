@@ -1,0 +1,84 @@
+# AI / Agents / LLM Infrastructure
+https://www.linkedin.com/company/vapi-ai
+https://www.linkedin.com/company/pipecat-ai
+https://www.linkedin.com/company/outlines-ai
+https://www.linkedin.com/company/guardrails-ai
+https://www.linkedin.com/company/instructor-ai
+https://www.linkedin.com/company/marimo-io
+https://www.linkedin.com/company/promptfoo
+https://www.linkedin.com/company/phospho-app
+https://www.linkedin.com/company/traceloop
+https://www.linkedin.com/company/ragie-ai
+https://www.linkedin.com/company/morphik-ai
+# Dev Tools / Infrastructure
+https://www.linkedin.com/company/wasp-lang
+https://www.linkedin.com/company/encore-dev
+https://www.linkedin.com/company/defangio
+https://www.linkedin.com/company/dagger-io
+https://www.linkedin.com/company/earthly-tech
+https://www.linkedin.com/company/devzero
+https://www.linkedin.com/company/glasskube
+https://www.linkedin.com/company/cyclops-ui
+https://www.linkedin.com/company/restate-dev
+https://www.linkedin.com/company/wundergraph
+https://www.linkedin.com/company/drizzle-team
+# Databases / Data Infra
+https://www.linkedin.com/company/xata
+https://www.linkedin.com/company/convex-dev
+https://www.linkedin.com/company/electricsql
+https://www.linkedin.com/company/powersync
+https://www.linkedin.com/company/zero-sync
+https://www.linkedin.com/company/rocicorp
+https://www.linkedin.com/company/dolt-hub
+https://www.linkedin.com/company/nile-database
+https://www.linkedin.com/company/tembo-io
+https://www.linkedin.com/company/quickwit
+https://www.linkedin.com/company/chdb-io
+https://www.linkedin.com/company/turbopuffer
+https://www.linkedin.com/company/paradedb
+# Analytics / Observability / Monitoring
+https://www.linkedin.com/company/hyperdx
+https://www.linkedin.com/company/last9io
+https://www.linkedin.com/company/parca-dev
+https://www.linkedin.com/company/jitsu-com
+https://www.linkedin.com/company/openpanel-dev
+# Design / Frontend
+https://www.linkedin.com/company/shadcn-ui
+https://www.linkedin.com/company/magic-ui
+# Productivity / Notes / Collaboration
+https://www.linkedin.com/company/remnote
+https://www.linkedin.com/company/capacities-io
+https://www.linkedin.com/company/reflect-app
+https://www.linkedin.com/company/cap-so
+# CRM / Marketing / Ops / Support
+https://www.linkedin.com/company/plain-com
+https://www.linkedin.com/company/typebot
+https://www.linkedin.com/company/loops-so
+https://www.linkedin.com/company/knock-app
+# Commerce / Billing / Fintech
+https://www.linkedin.com/company/polar-sh
+https://www.linkedin.com/company/creem-io
+https://www.linkedin.com/company/hyperswitch
+# Security / Auth
+https://www.linkedin.com/company/stack-auth
+https://www.linkedin.com/company/logto-io
+https://www.linkedin.com/company/permit-io
+https://www.linkedin.com/company/warrant-dev
+https://www.linkedin.com/company/pomerium-io
+# ML / MLOps
+https://www.linkedin.com/company/giskard-ai
+https://www.linkedin.com/company/evidently-ai
+# Content / CMS / Docs
+https://www.linkedin.com/company/payloadcms
+https://www.linkedin.com/company/tina-io
+https://www.linkedin.com/company/mintlify
+https://www.linkedin.com/company/fumadocs
+# Video / Media
+https://www.linkedin.com/company/remotion-dev
+https://www.linkedin.com/company/motion-canvas
+https://www.linkedin.com/company/revideo
+# Testing / QA
+https://www.linkedin.com/company/checkly
+https://www.linkedin.com/company/keploy
+# Search
+https://www.linkedin.com/company/marqo-ai

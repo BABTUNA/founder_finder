@@ -1,0 +1,93 @@
+# AI / Agents / LLM Infrastructure
+https://www.linkedin.com/company/langfuse
+https://www.linkedin.com/company/helicone
+https://www.linkedin.com/company/berriai
+https://www.linkedin.com/company/trychroma
+https://www.linkedin.com/company/lancedb
+https://www.linkedin.com/company/crewai-inc
+https://www.linkedin.com/company/unsloth-ai
+https://www.linkedin.com/company/mem0ai
+https://www.linkedin.com/company/letta-ai
+https://www.linkedin.com/company/e2b-dev
+https://www.linkedin.com/company/daytonaio
+https://www.linkedin.com/company/continuedev
+https://www.linkedin.com/company/cline-bot
+https://www.linkedin.com/company/mastra-ai
+https://www.linkedin.com/company/pydantic
+https://www.linkedin.com/company/all-hands-ai
+https://www.linkedin.com/company/onyx-dot-app
+https://www.linkedin.com/company/browser-use
+https://www.linkedin.com/company/browserbase
+https://www.linkedin.com/company/traceroot-ai
+https://www.linkedin.com/company/flowiseai
+# Dev Tools / Infrastructure
+https://www.linkedin.com/company/hoppscotch
+https://www.linkedin.com/company/infisical
+https://www.linkedin.com/company/teamhanko
+https://www.linkedin.com/company/better-auth
+https://www.linkedin.com/company/coollabsio
+https://www.linkedin.com/company/dokploy
+https://www.linkedin.com/company/ubicloud
+https://www.linkedin.com/company/hatchet-dev
+https://www.linkedin.com/company/inngest
+https://www.linkedin.com/company/windmill-labs
+https://www.linkedin.com/company/triggerdotdev
+https://www.linkedin.com/company/calcom
+https://www.linkedin.com/company/dubinc
+https://www.linkedin.com/company/resend
+https://www.linkedin.com/company/turso
+https://www.linkedin.com/company/railway-app
+https://www.linkedin.com/company/fly-io
+# Databases / Data Infra
+https://www.linkedin.com/company/tinybirdco
+https://www.linkedin.com/company/pocketbase
+https://www.linkedin.com/company/surrealdb
+https://www.linkedin.com/company/meilisearch
+https://www.linkedin.com/company/typesense
+https://www.linkedin.com/company/motherduck
+# Analytics / Observability
+https://www.linkedin.com/company/umami-software
+https://www.linkedin.com/company/openobserve
+https://www.linkedin.com/company/signoz
+https://www.linkedin.com/company/highlightio
+https://www.linkedin.com/company/openreplay
+# Design / Frontend
+https://www.linkedin.com/company/excalidraw
+https://www.linkedin.com/company/tldraw
+https://www.linkedin.com/company/penpot
+# Productivity / Collaboration
+https://www.linkedin.com/company/hulylabs
+https://www.linkedin.com/company/planepowered
+https://www.linkedin.com/company/teable
+https://www.linkedin.com/company/papermark
+https://www.linkedin.com/company/outlinewiki
+https://www.linkedin.com/company/logseq
+https://www.linkedin.com/company/anytype
+# CRM / Marketing / Ops
+https://www.linkedin.com/company/documenso
+https://www.linkedin.com/company/formbricks
+https://www.linkedin.com/company/chatwoot
+https://www.linkedin.com/company/novuhq
+https://www.linkedin.com/company/listmonk
+https://www.linkedin.com/company/twentyhq
+# Commerce / Billing
+https://www.linkedin.com/company/medusajs
+https://www.linkedin.com/company/saleor
+https://www.linkedin.com/company/vendure
+https://www.linkedin.com/company/lago-hq
+https://www.linkedin.com/company/openmeter
+https://www.linkedin.com/company/useautumn
+# Security / Auth
+https://www.linkedin.com/company/authentik-security-inc
+https://www.linkedin.com/company/keephq
+https://www.linkedin.com/company/ory-corp
+https://www.linkedin.com/company/zitadel
+https://www.linkedin.com/company/oso-security
+https://www.linkedin.com/company/cerbos
+# Low-code / Workflow
+https://www.linkedin.com/company/nocobase
+https://www.linkedin.com/company/tooljet
+https://www.linkedin.com/company/activepieces
+# ML / Data Science
+https://www.linkedin.com/company/zenml
+https://www.linkedin.com/company/comet-ml
