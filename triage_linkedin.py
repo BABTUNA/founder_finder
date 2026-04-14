@@ -21,6 +21,7 @@ import argparse
 import csv
 import json
 import sys
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -77,6 +78,13 @@ def parse_args() -> argparse.Namespace:
         metavar="URL",
         default=None,
         help="Attach to Chrome at this CDP URL (overrides --cdp if both set).",
+    )
+    p.add_argument(
+        "--cdp-wait",
+        type=int,
+        default=None,
+        metavar="SEC",
+        help="Retry CDP connection for up to SEC seconds (default: 20 with --cdp, 0 if unset without CDP). Use 0 for no wait.",
     )
     return p.parse_args()
 
@@ -194,38 +202,45 @@ def default_chrome_profile_dir() -> Path:
     return Path.home() / "AppData" / "Local" / "Google" / "Chrome" / "User Data"
 
 
-def _connect_cdp_page(p, cdp_url: str):
+def _connect_cdp_page(p, cdp_url: str, wait_seconds: int = 0):
     """Attach to an existing Chrome with --remote-debugging-port (does not close Chrome)."""
-    try:
-        browser = p.chromium.connect_over_cdp(cdp_url)
-    except Exception as e:
-        print(
-            f"Could not connect to Chrome at {cdp_url!r}: {e}",
-            file=sys.stderr,
-        )
-        print(
-            "  Nothing is listening on that port yet. Do this:",
-            file=sys.stderr,
-        )
-        print(
-            "    1) Run start_chrome_debug.bat from this repo (or start Chrome with "
-            "--remote-debugging-port=9222 on the same URL host/port).",
-            file=sys.stderr,
-        )
-        print(
-            "    2) Wait until Chrome opens and stay running.",
-            file=sys.stderr,
-        )
-        print(
-            "    3) In another terminal, run triage_linkedin.py again with --cdp.",
-            file=sys.stderr,
-        )
-        print(
-            "  Check: in PowerShell,  Test-NetConnection 127.0.0.1 -Port 9222  "
-            "should show TcpTestSucceeded : True",
-            file=sys.stderr,
-        )
-        raise SystemExit(2) from e
+    deadline = time.monotonic() + max(0, wait_seconds)
+    tried = False
+    while True:
+        try:
+            browser = p.chromium.connect_over_cdp(cdp_url)
+            break
+        except Exception as e:
+            last_err = e
+            if time.monotonic() >= deadline:
+                print(
+                    f"Could not connect to Chrome at {cdp_url!r}: {e}",
+                    file=sys.stderr,
+                )
+                print(
+                    "  Nothing is listening on that port (or Chrome closed). Typical fixes:",
+                    file=sys.stderr,
+                )
+                print(
+                    "    1) Run start_chrome_debug.bat (updated: single-line launch + port check).",
+                    file=sys.stderr,
+                )
+                print(
+                    "    2) Wait until the batch file prints OK for port 9222, then run triage with --cdp.",
+                    file=sys.stderr,
+                )
+                print(
+                    "    3) Or:  Test-NetConnection 127.0.0.1 -Port 9222  -> TcpTestSucceeded : True",
+                    file=sys.stderr,
+                )
+                raise SystemExit(2) from e
+            if not tried and wait_seconds > 0:
+                print(
+                    f"  Waiting up to {wait_seconds}s for Chrome CDP at {cdp_url!r}...",
+                    file=sys.stderr,
+                )
+                tried = True
+            time.sleep(0.4)
     if not browser.contexts:
         browser.close()
         raise RuntimeError(
@@ -240,11 +255,12 @@ def triage_browser_session(
     profile_dir: Path,
     headless: bool,
     cdp_url: str | None,
+    cdp_wait_seconds: int = 0,
 ):
     """Yield a Playwright Page for triage: either CDP attach or persistent profile launch."""
     with sync_playwright() as p:
         if cdp_url:
-            browser, page = _connect_cdp_page(p, cdp_url)
+            browser, page = _connect_cdp_page(p, cdp_url, wait_seconds=cdp_wait_seconds)
             try:
                 yield page
             finally:
@@ -357,6 +373,13 @@ def main() -> int:
     if cdp_url is None and args.cdp:
         cdp_url = "http://127.0.0.1:9222"
 
+    if args.cdp_wait is not None:
+        cdp_wait = max(0, args.cdp_wait)
+    elif cdp_url:
+        cdp_wait = 20
+    else:
+        cdp_wait = 0
+
     profile_dir = Path(args.profile_dir) if args.profile_dir else default_chrome_profile_dir()
     if not cdp_url and not profile_dir.exists():
         print(f"Error: Chrome profile dir not found: {profile_dir}", file=sys.stderr)
@@ -388,7 +411,12 @@ def main() -> int:
 
     out_path = Path(args.output)
 
-    for page in triage_browser_session(profile_dir, headless=args.headless, cdp_url=cdp_url):
+    for page in triage_browser_session(
+        profile_dir,
+        headless=args.headless,
+        cdp_url=cdp_url,
+        cdp_wait_seconds=cdp_wait,
+    ):
         for idx, item in enumerate(items, 1):
             print(f"\n[{idx}/{len(items)}] {item.url}", file=sys.stderr)
             try:

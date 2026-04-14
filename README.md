@@ -167,9 +167,10 @@ python triage_linkedin.py s24_founders.json --output triage.csv --resume
 
 # If Chrome exits immediately or you see a profile/lock error: close all Chrome windows
 # and retry, OR start Chrome with debugging then attach:
-#   1) Run start_chrome_debug.bat (kills Chrome, restarts with port 9222)
+#   1) Run start_chrome_debug.bat (kills Chrome, restarts with port 9222; wait until it prints OK for 9222)
 #   2) In another terminal:
 python triage_linkedin.py companies.txt --output triage.csv --resume --cdp
+# Optional: fail fast with  --cdp-wait 0  or wait longer with  --cdp-wait 60
 ```
 
 ### Controls
