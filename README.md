@@ -142,3 +142,34 @@ In auto mode (`--delay N`):
 - **Ctrl+C** — stop
 
 Progress is saved to `follow_progress.json` after each profile, so you can safely stop and resume later with `--resume`.
+
+## LinkedIn Triage (Up/Down)
+
+If you want a fast manual “review later vs skip” flow (using your real Chrome profile), use `triage_linkedin.py`.
+
+### Install
+
+```bash
+pip install playwright
+playwright install chromium
+```
+
+### Usage
+
+```bash
+# From a .txt file (one LinkedIn URL per line)
+python triage_linkedin.py links.txt --output triage.csv
+
+# From YC founders JSON (extracts founder linkedin URLs)
+python triage_linkedin.py s24_founders.json --output triage.csv --resume
+```
+
+### Controls
+
+- **Up arrow** — `review_later`
+- **Down arrow** — `skip`
+- **q** — quit (progress saved)
+
+Notes:
+- Keystrokes are captured from the **terminal window**, so keep the terminal focused when pressing Up/Down.
+- It launches Chrome with a persistent profile (default Windows path). Use `--profile-dir` if your Chrome user data lives elsewhere.
