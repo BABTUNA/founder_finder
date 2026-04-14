@@ -1,0 +1,150 @@
+# AI / Agents / LLM Infrastructure
+https://www.linkedin.com/company/lmnr-ai
+https://www.linkedin.com/company/comet-opik
+https://www.linkedin.com/company/agenta-ai
+https://www.linkedin.com/company/parea-ai
+https://www.linkedin.com/company/athina-ai
+https://www.linkedin.com/company/openlit
+https://www.linkedin.com/company/lunary-ai
+https://www.linkedin.com/company/baml-boundary
+https://www.linkedin.com/company/mirascope
+https://www.linkedin.com/company/ell-ai
+https://www.linkedin.com/company/controlflow-ai
+https://www.linkedin.com/company/julep-ai
+https://www.linkedin.com/company/griptape-ai
+https://www.linkedin.com/company/empromptu
+https://www.linkedin.com/company/ragas-io
+https://www.linkedin.com/company/deepeval
+https://www.linkedin.com/company/patronus-ai
+https://www.linkedin.com/company/uptrain-ai
+https://www.linkedin.com/company/kiln-ai
+https://www.linkedin.com/company/langwatch
+https://www.linkedin.com/company/pezzo-ai
+https://www.linkedin.com/company/portkey-ai
+https://www.linkedin.com/company/gatewayz
+https://www.linkedin.com/company/glama-ai
+https://www.linkedin.com/company/smithery-ai
+https://www.linkedin.com/company/composio-dev
+https://www.linkedin.com/company/arcade-ai
+https://www.linkedin.com/company/toolhouse-ai
+https://www.linkedin.com/company/stainless-api
+https://www.linkedin.com/company/speakeasy-api
+https://www.linkedin.com/company/scalar-com
+# Browser / Computer Agents
+https://www.linkedin.com/company/steel-browser
+https://www.linkedin.com/company/hyperbrowser
+https://www.linkedin.com/company/anchor-browser
+https://www.linkedin.com/company/notte-ai
+https://www.linkedin.com/company/skyvern-ai
+https://www.linkedin.com/company/nanobrowser
+# Dev Tools / Infrastructure
+https://www.linkedin.com/company/val-town
+https://www.linkedin.com/company/deco-cx
+https://www.linkedin.com/company/plasmo-corp
+https://www.linkedin.com/company/nitric
+https://www.linkedin.com/company/ampt-io
+https://www.linkedin.com/company/sst-platform
+https://www.linkedin.com/company/zerops
+https://www.linkedin.com/company/kubefirst
+https://www.linkedin.com/company/glasskube-inc
+https://www.linkedin.com/company/tilt-dev
+https://www.linkedin.com/company/okteto
+https://www.linkedin.com/company/dev-pod
+https://www.linkedin.com/company/loft-labs
+https://www.linkedin.com/company/shakudo
+https://www.linkedin.com/company/kitops
+https://www.linkedin.com/company/unweave
+https://www.linkedin.com/company/beam-cloud
+https://www.linkedin.com/company/northflank
+https://www.linkedin.com/company/porter-run
+https://www.linkedin.com/company/kubeshop
+https://www.linkedin.com/company/testkube
+https://www.linkedin.com/company/tracetest
+https://www.linkedin.com/company/hurl-dev
+# Data / Databases
+https://www.linkedin.com/company/starbase-db
+https://www.linkedin.com/company/sqlite-cloud
+https://www.linkedin.com/company/libsql
+https://www.linkedin.com/company/duckdb-foundation
+https://www.linkedin.com/company/bauplan-labs
+https://www.linkedin.com/company/feldera
+https://www.linkedin.com/company/glaredb
+https://www.linkedin.com/company/espresso-db
+https://www.linkedin.com/company/neurelo
+https://www.linkedin.com/company/bytebase
+https://www.linkedin.com/company/dbos-inc
+https://www.linkedin.com/company/tigrisdata
+# Search / Vector
+https://www.linkedin.com/company/vespa-ai
+https://www.linkedin.com/company/pgvector
+https://www.linkedin.com/company/vectara
+https://www.linkedin.com/company/mixedbread-ai
+# Orchestration / Workflow
+https://www.linkedin.com/company/flowise-io
+https://www.linkedin.com/company/pocketflow
+https://www.linkedin.com/company/prefecthq-oss
+https://www.linkedin.com/company/zeebe-io
+https://www.linkedin.com/company/kestra-io
+https://www.linkedin.com/company/conductor-oss
+# Monitoring / Logs
+https://www.linkedin.com/company/highlight-run
+https://www.linkedin.com/company/logflare
+https://www.linkedin.com/company/axiom-co
+https://www.linkedin.com/company/coroot
+https://www.linkedin.com/company/groundcover-io
+https://www.linkedin.com/company/odigos-io
+# CMS / Content / Docs
+https://www.linkedin.com/company/ghost-org
+https://www.linkedin.com/company/hashnode
+https://www.linkedin.com/company/novu-cms
+https://www.linkedin.com/company/crystallize-com
+https://www.linkedin.com/company/hygraph
+https://www.linkedin.com/company/cosmicjs
+https://www.linkedin.com/company/plasmicapp
+https://www.linkedin.com/company/novu-io
+https://www.linkedin.com/company/zudoku
+# Email / Comms
+https://www.linkedin.com/company/react-email
+https://www.linkedin.com/company/jsx-email
+https://www.linkedin.com/company/inboxzero
+https://www.linkedin.com/company/mailpit
+# Commerce / Fintech / Billing
+https://www.linkedin.com/company/dodopayments
+https://www.linkedin.com/company/rivet-billing
+https://www.linkedin.com/company/flagsmith
+https://www.linkedin.com/company/openfeature
+https://www.linkedin.com/company/growthbook
+https://www.linkedin.com/company/unleash-hosted
+https://www.linkedin.com/company/hackolade
+# Security / Auth / Privacy
+https://www.linkedin.com/company/openreplay-inc
+https://www.linkedin.com/company/teller-hq
+https://www.linkedin.com/company/infisical-labs
+https://www.linkedin.com/company/doppler-hq
+https://www.linkedin.com/company/hoop-dev
+https://www.linkedin.com/company/spice-ai
+https://www.linkedin.com/company/arcjet
+https://www.linkedin.com/company/unkey-com
+https://www.linkedin.com/company/permify
+https://www.linkedin.com/company/topaz-authz
+# Collab / Productivity
+https://www.linkedin.com/company/liveblocks
+https://www.linkedin.com/company/partykit
+https://www.linkedin.com/company/yjs-dev
+https://www.linkedin.com/company/automerge
+https://www.linkedin.com/company/excalideck
+https://www.linkedin.com/company/blocknote
+# Testing / QA / Eval
+https://www.linkedin.com/company/qa-wolf
+https://www.linkedin.com/company/deepcheck
+https://www.linkedin.com/company/meticulous-ai
+https://www.linkedin.com/company/reflect-run
+# Video / Media / Creator
+https://www.linkedin.com/company/screen-studio
+https://www.linkedin.com/company/loom-oss
+https://www.linkedin.com/company/tella-tv
+# MLOps / Experimentation
+https://www.linkedin.com/company/neptune-ai
+https://www.linkedin.com/company/aim-stack
+https://www.linkedin.com/company/dvc-org
+https://www.linkedin.com/company/clearml
