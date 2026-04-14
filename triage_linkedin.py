@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
+import msvcrt
 from playwright.sync_api import sync_playwright
 
 
@@ -159,6 +160,27 @@ def append_csv_row(path: Path, row: dict) -> None:
         w.writerow({k: row.get(k, "") for k in fieldnames})
 
 
+def read_triage_key() -> str:
+    """Return REVIEW_LATER or SKIP based on Up/Down arrow keys.
+
+    Also supports:
+      - 'q' to quit
+      - 'o' to open (re-open current URL)
+    """
+    while True:
+        ch = msvcrt.getwch()
+        if ch in ("q", "Q"):
+            return "quit"
+        if ch in ("o", "O"):
+            return "open"
+        if ch in ("\x00", "\xe0"):
+            ch2 = msvcrt.getwch()
+            if ch2 == "H":  # up arrow
+                return REVIEW_LATER
+            if ch2 == "P":  # down arrow
+                return SKIP
+
+
 def main() -> int:
     args = parse_args()
     in_path = Path(args.input)
@@ -198,15 +220,43 @@ def main() -> int:
 
     print(f"Triage queue: {len(items)} URL(s).", file=sys.stderr)
 
-    for _ in open_persistent_chrome(profile_dir, headless=args.headless):
-        # Triaging loop comes next commit
-        break
-
     out_path = Path(args.output)
-    append_csv_row(
-        out_path,
-        {"url": "https://www.linkedin.com/", "decision": "example", "decided_at": utc_now_iso(), "source": "example"},
-    )
+
+    for page in open_persistent_chrome(profile_dir, headless=args.headless):
+        for idx, item in enumerate(items, 1):
+            print(f"\n[{idx}/{len(items)}] {item.url}", file=sys.stderr)
+            try:
+                page.goto(item.url, wait_until="domcontentloaded", timeout=45000)
+            except Exception as e:
+                print(f"  Navigation error: {e}", file=sys.stderr)
+
+            print("  Up=review later | Down=skip | q=quit", file=sys.stderr)
+            while True:
+                action = read_triage_key()
+                if action == "open":
+                    try:
+                        page.goto(item.url, wait_until="domcontentloaded", timeout=45000)
+                    except Exception:
+                        pass
+                    continue
+                if action == "quit":
+                    save_progress(progress_path, progress)
+                    print("\nQuitting (progress saved).", file=sys.stderr)
+                    return 0
+
+                decided_at = utc_now_iso()
+                progress["decisions"][item.url] = {
+                    "decision": action,
+                    "decided_at": decided_at,
+                    "source": item.source,
+                }
+                save_progress(progress_path, progress)
+                append_csv_row(
+                    out_path,
+                    {"url": item.url, "decision": action, "decided_at": decided_at, "source": item.source},
+                )
+                break
+        break
     return 0
 
 
