@@ -154,6 +154,8 @@ pip install playwright
 playwright install chromium
 ```
 
+If you see `ModuleNotFoundError: No module named 'playwright'`, install the package in the **same** environment as `python` (for example `python -m pip install playwright`), then run `playwright install chromium` again if needed.
+
 ### Usage
 
 ```bash
