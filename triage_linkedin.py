@@ -9,6 +9,10 @@ Opens each LinkedIn URL in a real Chrome profile and lets you triage quickly:
 Writes decisions to a CSV and can resume safely.
 
 Windows-focused (uses msvcrt for key capture).
+
+If launching Chrome fails (profile locked / exit code 21), close all Chrome windows
+and retry, or start Chrome with remote debugging via ``start_chrome_debug.bat`` and
+run this script with ``--cdp``.
 """
 
 from __future__ import annotations
@@ -63,6 +67,17 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     p.add_argument("--headless", action="store_true", help="Run headless (not recommended for manual triage).")
+    p.add_argument(
+        "--cdp",
+        action="store_true",
+        help="Attach to Chrome remote debugging at http://127.0.0.1:9222 (run start_chrome_debug.bat first).",
+    )
+    p.add_argument(
+        "--cdp-url",
+        metavar="URL",
+        default=None,
+        help="Attach to Chrome at this CDP URL (overrides --cdp if both set).",
+    )
     return p.parse_args()
 
 
@@ -179,15 +194,66 @@ def default_chrome_profile_dir() -> Path:
     return Path.home() / "AppData" / "Local" / "Google" / "Chrome" / "User Data"
 
 
-def open_persistent_chrome(profile_dir: Path, headless: bool):
-    with sync_playwright() as p:
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir),
-            headless=headless,
-            channel="chrome",
-            args=["--disable-blink-features=AutomationControlled"],
-            viewport={"width": 1400, "height": 900},
+def _connect_cdp_page(p, cdp_url: str):
+    """Attach to an existing Chrome with --remote-debugging-port (does not close Chrome)."""
+    try:
+        browser = p.chromium.connect_over_cdp(cdp_url)
+    except Exception as e:
+        print(
+            f"Could not connect to Chrome at {cdp_url!r}: {e}",
+            file=sys.stderr,
         )
+        print(
+            "  Start Chrome with remote debugging first (see start_chrome_debug.bat), "
+            "then run again with --cdp.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from e
+    if not browser.contexts:
+        browser.close()
+        raise RuntimeError(
+            "Chrome has no browser contexts. Start Chrome with remote debugging enabled."
+        )
+    ctx = browser.contexts[0]
+    page = ctx.pages[0] if ctx.pages else ctx.new_page()
+    return browser, page
+
+
+def triage_browser_session(
+    profile_dir: Path,
+    headless: bool,
+    cdp_url: str | None,
+):
+    """Yield a Playwright Page for triage: either CDP attach or persistent profile launch."""
+    with sync_playwright() as p:
+        if cdp_url:
+            browser, page = _connect_cdp_page(p, cdp_url)
+            try:
+                yield page
+            finally:
+                browser.close()
+            return
+        try:
+            context = p.chromium.launch_persistent_context(
+                user_data_dir=str(profile_dir),
+                headless=headless,
+                channel="chrome",
+                args=["--disable-blink-features=AutomationControlled"],
+                viewport={"width": 1400, "height": 900},
+            )
+        except Exception as e:
+            print(
+                "Could not launch Chrome with your profile (often: Chrome is already open "
+                "and the profile is locked).",
+                file=sys.stderr,
+            )
+            print(f"  Detail: {e}", file=sys.stderr)
+            print(
+                "  Fix: close every Chrome window and run again, OR run start_chrome_debug.bat "
+                "then use:  python triage_linkedin.py ... --cdp",
+                file=sys.stderr,
+            )
+            raise SystemExit(2) from e
         try:
             page = context.pages[0] if context.pages else context.new_page()
             yield page
@@ -270,15 +336,26 @@ def main() -> int:
     if args.limit:
         items = items[: args.limit]
 
+    cdp_url: str | None = args.cdp_url
+    if cdp_url is None and args.cdp:
+        cdp_url = "http://127.0.0.1:9222"
+
     profile_dir = Path(args.profile_dir) if args.profile_dir else default_chrome_profile_dir()
-    if not profile_dir.exists():
+    if not cdp_url and not profile_dir.exists():
         print(f"Error: Chrome profile dir not found: {profile_dir}", file=sys.stderr)
         print("Pass --profile-dir to point at your Chrome 'User Data' directory.", file=sys.stderr)
         return 2
 
     print(f"Loaded {len(items)} URL(s).", file=sys.stderr)
-    print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
-    print("Next: open browser + key controls.", file=sys.stderr)
+    if cdp_url:
+        print(f"Connecting to Chrome via CDP: {cdp_url}", file=sys.stderr)
+        print(
+            "  (Chrome must be running with remote debugging, e.g. start_chrome_debug.bat)",
+            file=sys.stderr,
+        )
+    else:
+        print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
+    print("Next: browser + key controls.", file=sys.stderr)
 
     progress_path = Path(args.progress)
     progress = load_progress(progress_path)
@@ -294,7 +371,7 @@ def main() -> int:
 
     out_path = Path(args.output)
 
-    for page in open_persistent_chrome(profile_dir, headless=args.headless):
+    for page in triage_browser_session(profile_dir, headless=args.headless, cdp_url=cdp_url):
         for idx, item in enumerate(items, 1):
             print(f"\n[{idx}/{len(items)}] {item.url}", file=sys.stderr)
             try:

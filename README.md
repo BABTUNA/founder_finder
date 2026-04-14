@@ -158,10 +158,16 @@ playwright install chromium
 
 ```bash
 # From a .txt file (one LinkedIn URL per line)
-python triage_linkedin.py links.txt --output triage.csv
+python triage_linkedin.py companies.txt --output triage.csv --resume
 
 # From YC founders JSON (extracts founder linkedin URLs)
 python triage_linkedin.py s24_founders.json --output triage.csv --resume
+
+# If Chrome exits immediately or you see a profile/lock error: close all Chrome windows
+# and retry, OR start Chrome with debugging then attach:
+#   1) Run start_chrome_debug.bat (kills Chrome, restarts with port 9222)
+#   2) In another terminal:
+python triage_linkedin.py companies.txt --output triage.csv --resume --cdp
 ```
 
 ### Controls
@@ -172,4 +178,4 @@ python triage_linkedin.py s24_founders.json --output triage.csv --resume
 
 Notes:
 - Keystrokes are captured from the **terminal window**, so keep the terminal focused when pressing Up/Down.
-- It launches Chrome with a persistent profile (default Windows path). Use `--profile-dir` if your Chrome user data lives elsewhere.
+- By default it launches Chrome with a persistent profile (default Windows path). If **Chrome is already running**, that profile is often **locked** and Playwright will fail—use **`--cdp`** after `start_chrome_debug.bat`, or quit Chrome first. Use `--profile-dir` if your Chrome user data lives elsewhere.
