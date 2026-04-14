@@ -118,8 +118,40 @@ def load_items(path: Path) -> list[TriageItem]:
     if ext == ".json":
         data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, list):
-            items = [TriageItem(url=normalize_linkedin_url(str(u)), source=path.name) for u in data]
-            return dedupe_items([it for it in items if it.url])
+            items: list[TriageItem] = []
+            for entry in data:
+                # 1) Plain list of URLs
+                if isinstance(entry, str):
+                    u = normalize_linkedin_url(entry)
+                    if u:
+                        items.append(TriageItem(url=u, source=path.name))
+                    continue
+
+                # 2) YC founders output shape: [{..., founders:[{linkedin:"..."}]}]
+                if isinstance(entry, dict):
+                    founders = entry.get("founders")
+                    if isinstance(founders, list):
+                        for f in founders:
+                            if not isinstance(f, dict):
+                                continue
+                            u = normalize_linkedin_url(f.get("linkedin", "") or "")
+                            if u:
+                                items.append(TriageItem(url=u, source=path.name))
+                        continue
+
+                    # 3) Generic dict with a url-ish field
+                    for key in ("url", "linkedin", "linkedin_url", "link"):
+                        if key in entry:
+                            u = normalize_linkedin_url(str(entry.get(key) or ""))
+                            if u:
+                                items.append(TriageItem(url=u, source=path.name))
+                            break
+                    continue
+
+                # Unknown entry type: ignore
+                continue
+
+            return dedupe_items(items)
         raise ValueError("JSON input must be an array of URLs")
     if ext == ".csv":
         rows: list[TriageItem] = []
