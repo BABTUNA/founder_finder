@@ -65,6 +65,10 @@ async def scrape_linkedin_company(page, url: str) -> dict:
         result["location"] = await _extract_location(page)
         print(f"  Location: {result['location']}", file=sys.stderr)
 
+        # --- Associated members ---
+        result["associated_members"] = await _extract_members(page)
+        print(f"  Members: {result['associated_members']}", file=sys.stderr)
+
     except Exception as e:
         print(f"  Error scraping {url}: {e}", file=sys.stderr)
         result["error"] = str(e)
@@ -149,6 +153,41 @@ async def _extract_location(page) -> str:
             return '';
         }""")
         return location_text.strip() if location_text else ""
+    except Exception:
+        return ""
+
+
+async def _extract_members(page) -> str:
+    """Extract associated members count."""
+    try:
+        members = await page.evaluate("""() => {
+            const body = document.body.innerText;
+
+            const patterns = [
+                /(\d[\d,]+)\s+associated\s+member/i,
+                /(\d[\d,]+)\s+member/i,
+                /(\d[\d,]+)\s+employees? on LinkedIn/i,
+                /(\d[\d,]+)\s+employees?/i,
+            ];
+
+            for (const pat of patterns) {
+                const m = body.match(pat);
+                if (m) return m[1];
+            }
+
+            // Check specific elements
+            const els = document.querySelectorAll(
+                '[class*="face-pile"], [class*="member"], [class*="employee"]'
+            );
+            for (const el of els) {
+                const text = (el.innerText || '').trim();
+                const m = text.match(/(\d[\d,]+)/);
+                if (m) return m[1];
+            }
+
+            return '';
+        }""")
+        return members.strip() if members else ""
     except Exception:
         return ""
 
