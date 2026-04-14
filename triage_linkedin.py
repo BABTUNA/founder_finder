@@ -22,6 +22,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
+from playwright.sync_api import sync_playwright
+
 
 DEFAULT_OUTPUT = "triage.csv"
 DEFAULT_PROGRESS = "triage_progress.json"
@@ -49,6 +51,14 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument("--resume", action="store_true", help="Skip URLs already present in progress file")
     p.add_argument("--limit", type=int, help="Max URLs to triage this run")
+    p.add_argument(
+        "--profile-dir",
+        help=(
+            "Chrome User Data directory to use for your real profile session. "
+            "If omitted, defaults to Windows Chrome user data location."
+        ),
+    )
+    p.add_argument("--headless", action="store_true", help="Run headless (not recommended for manual triage).")
     return p.parse_args()
 
 
@@ -96,6 +106,26 @@ def load_items(path: Path) -> list[TriageItem]:
     raise ValueError(f"Unsupported input type: {ext}. Use .txt, .csv, or .json")
 
 
+def default_chrome_profile_dir() -> Path:
+    return Path.home() / "AppData" / "Local" / "Google" / "Chrome" / "User Data"
+
+
+def open_persistent_chrome(profile_dir: Path, headless: bool):
+    with sync_playwright() as p:
+        context = p.chromium.launch_persistent_context(
+            user_data_dir=str(profile_dir),
+            headless=headless,
+            channel="chrome",
+            args=["--disable-blink-features=AutomationControlled"],
+            viewport={"width": 1400, "height": 900},
+        )
+        try:
+            page = context.pages[0] if context.pages else context.new_page()
+            yield page
+        finally:
+            context.close()
+
+
 def main() -> int:
     args = parse_args()
     in_path = Path(args.input)
@@ -113,7 +143,17 @@ def main() -> int:
     if args.limit:
         items = items[: args.limit]
 
-    print(f"Loaded {len(items)} URL(s). Next: browser + key controls.", file=sys.stderr)
+    profile_dir = Path(args.profile_dir) if args.profile_dir else default_chrome_profile_dir()
+    if not profile_dir.exists():
+        print(f"Error: Chrome profile dir not found: {profile_dir}", file=sys.stderr)
+        print("Pass --profile-dir to point at your Chrome 'User Data' directory.", file=sys.stderr)
+        return 2
+
+    print(f"Loaded {len(items)} URL(s).", file=sys.stderr)
+    print(f"Using Chrome profile: {profile_dir}", file=sys.stderr)
+    print("Next: open browser + key controls.", file=sys.stderr)
+    for _ in open_persistent_chrome(profile_dir, headless=args.headless):
+        break
     return 0
 
 
