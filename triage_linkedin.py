@@ -76,17 +76,50 @@ def _read_nonempty_lines(path: Path) -> list[str]:
     return lines
 
 
+def normalize_linkedin_url(raw: str) -> str:
+    s = (raw or "").strip()
+    if not s:
+        return ""
+    # Allow passing just a handle/path-ish chunk
+    if not s.startswith("http"):
+        if s.startswith("linkedin.com/") or s.startswith("www.linkedin.com/"):
+            s = "https://" + s.lstrip("/")
+        else:
+            return ""
+    # Strip URL fragments and noisy query params (basic)
+    s = s.split("#", 1)[0]
+    if "?" in s:
+        base, qs = s.split("?", 1)
+        # keep minimal; LinkedIn URLs typically don't need query strings for identity
+        s = base
+    return s.rstrip("/")
+
+
+def dedupe_items(items: Iterable[TriageItem]) -> list[TriageItem]:
+    seen: set[str] = set()
+    out: list[TriageItem] = []
+    for it in items:
+        if it.url in seen:
+            continue
+        seen.add(it.url)
+        out.append(it)
+    return out
+
+
 def load_items(path: Path) -> list[TriageItem]:
     if not path.exists():
         raise FileNotFoundError(str(path))
 
     ext = path.suffix.lower()
     if ext == ".txt":
-        return [TriageItem(url=u, source=path.name) for u in _read_nonempty_lines(path)]
+        raw = _read_nonempty_lines(path)
+        items = [TriageItem(url=normalize_linkedin_url(u), source=path.name) for u in raw]
+        return dedupe_items([it for it in items if it.url])
     if ext == ".json":
         data = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(data, list):
-            return [TriageItem(url=str(u).strip(), source=path.name) for u in data if str(u).strip()]
+            items = [TriageItem(url=normalize_linkedin_url(str(u)), source=path.name) for u in data]
+            return dedupe_items([it for it in items if it.url])
         raise ValueError("JSON input must be an array of URLs")
     if ext == ".csv":
         rows: list[TriageItem] = []
@@ -102,10 +135,10 @@ def load_items(path: Path) -> list[TriageItem]:
             if url_key is None:
                 raise ValueError("CSV must contain a 'url' (or linkedin/linkedin_url/link) column")
             for r in reader:
-                u = (r.get(url_key) or "").strip()
+                u = normalize_linkedin_url(r.get(url_key) or "")
                 if u:
                     rows.append(TriageItem(url=u, source=path.name))
-        return rows
+        return dedupe_items(rows)
 
     raise ValueError(f"Unsupported input type: {ext}. Use .txt, .csv, or .json")
 
