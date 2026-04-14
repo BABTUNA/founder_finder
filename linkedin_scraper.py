@@ -52,12 +52,60 @@ async def scrape_linkedin_company(page, url: str) -> dict:
     try:
         await page.goto(url, wait_until="domcontentloaded", timeout=30000)
         await page.wait_for_timeout(3000)
-        # TODO: extract fields
+
+        # Dismiss any login modals / overlays that might pop up
+        await _dismiss_overlays(page)
+        await page.wait_for_timeout(1000)
+
+        # --- Company Name ---
+        result["company_name"] = await _extract_company_name(page)
+        print(f"  Company: {result['company_name']}", file=sys.stderr)
+
     except Exception as e:
         print(f"  Error scraping {url}: {e}", file=sys.stderr)
         result["error"] = str(e)
 
     return result
+
+
+async def _dismiss_overlays(page):
+    """Try to close login modals and cookie banners."""
+    dismiss_selectors = [
+        "button.modal__dismiss",
+        "[data-tracking-control-name='public_jobs_contextual-sign-in-modal_modal_dismiss']",
+        ".contextual-sign-in-modal__modal-dismiss",
+        ".artdeco-modal__dismiss",
+        "button[aria-label='Dismiss']",
+        "button[aria-label='Close']",
+    ]
+    for sel in dismiss_selectors:
+        try:
+            btn = page.locator(sel).first
+            if await btn.is_visible(timeout=500):
+                await btn.click(timeout=1000)
+                await page.wait_for_timeout(500)
+        except Exception:
+            pass
+
+
+async def _extract_company_name(page) -> str:
+    """Get company name from the page header."""
+    selectors = [
+        "h1.top-card-layout__title",
+        "h1[class*='org-top-card']",
+        "h1",
+        "span.top-card-layout__title",
+    ]
+    for sel in selectors:
+        try:
+            el = page.locator(sel).first
+            if await el.is_visible(timeout=1000):
+                text = (await el.inner_text()).strip()
+                if text:
+                    return text
+        except Exception:
+            continue
+    return ""
 
 
 # ---------------------------------------------------------------------------
